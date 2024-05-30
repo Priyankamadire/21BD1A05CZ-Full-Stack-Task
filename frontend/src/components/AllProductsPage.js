@@ -6,7 +6,9 @@ const AllProductsPage = () => {
 
   useEffect(() => {
     axios
-      .get(`http://localhost:5000/categories/AMZ/products`)
+      .get(
+        "http://localhost:5000/test/companies/AMZ/categories/Laptop/products"
+      )
       .then((response) => setProducts(response.data))
       .catch((error) => console.error("Error fetching products:", error));
   }, []);

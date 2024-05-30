@@ -128,6 +128,24 @@ app.get("/categories/:categoryname/products/:productid", (req, res) => {
   res.json(productDetail);
 });
 
+app.get(
+  "/test/companies/:companyname/categories/:category/products",
+  async (req, res) => {
+    try {
+      const { companyname, category } = req.params;
+
+      const url = `${TEST_SERVER_URL}/test/companies/${companyname}/categories/${category}/products`;
+
+      const response = await axios.get(url);
+
+      res.json(response.data);
+    } catch (error) {
+      console.error("Error:", error);
+      res.status(500).send("Internal Server Error");
+    }
+  }
+);
+
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
