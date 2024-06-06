@@ -1,47 +1,11 @@
 const express = require("express");
 const axios = require("axios");
-const { v4: uuidv4 } = require("uuid");
-const NodeCache = require("node-cache");
-const dotenv = require("dotenv");
 const cors = require("cors");
-dotenv.config({ path: "./config.env" });
 
 const app = express();
-const PORT = process.env.PORT;
 
-const TEST_SERVER_URL = "http://20.244.56.144/test/companies";
+app.use(express.json());
 app.use(cors());
-const ACCESS_TOKEN =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJNYXBDbGFpbXMiOnsiZXhwIjoxNzE3MDc0ODA0LCJpYXQiOjE3MTcwNzQ1MDQsImlzcyI6IkFmZm9yZG1lZCIsImp0aSI6ImJhMzU1OGVhLTQ0NTgtNDU1Ni04NTJlLTBkYmEwOWZkYTNjMSIsInN1YiI6Im1hZGlyZXByaXlhbmthMzdAZ21haWwuY29tIn0sImNvbXBhbnlOYW1lIjoiVmVyY2VsQ29tcGFueSIsImNsaWVudElEIjoiYmEzNTU4ZWEtNDQ1OC00NTU2LTg1MmUtMGRiYTA5ZmRhM2MxIiwiY2xpZW50U2VjcmV0IjoiS0xBVW5rd29vaGtYTXJxcyIsIm93bmVyTmFtZSI6IlByaXlhbmthIiwib3duZXJFbWFpbCI6Im1hZGlyZXByaXlhbmthMzdAZ21haWwuY29tIiwicm9sbE5vIjoiMjFiZDFhMDVjeiJ9.CLI0TACKlsjHvj7drMOr65eZdHj0DXtxaHE7VU8pvO0";
-
-const cache = new NodeCache({ stdTTL: 300, checkperiod: 320 });
-
-const generateProductId = () => uuidv4();
-
-const fetchProducts = async (
-  company,
-  categoryname,
-  top,
-  minPrice,
-  maxPrice
-) => {
-  try {
-    const response = await axios.get(
-      `${TEST_SERVER_URL}/${company}/categories/${categoryname}/products`,
-      {
-        params: { top, minPrice, maxPrice },
-        headers: {
-          Authorization: `Bearer ${ACCESS_TOKEN}`,
-        },
-      }
-    );
-    return response.data;
-  } catch (error) {
-    console.error(`Error fetching data from ${company}:`, error.message);
-    return [];
-  }
-};
-
 app.get("/categories/:categoryname/products", async (req, res) => {
   try {
     const { categoryname } = req.params;
@@ -111,41 +75,86 @@ app.get("/categories/:categoryname/products", async (req, res) => {
   }
 });
 
-app.get("/categories/:categoryname/products/:productid", (req, res) => {
-  const { categoryname, productid } = req.params;
+app.get("/categories/:categoryname/products/:productid", async (req, res) => {
+  try {
+    const { categoryname, productid } = req.params;
+    const accessToken =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJNYXBDbGFpbXMiOnsiZXhwIjoxNzE3MDc0ODA0LCJpYXQiOjE3MTcwNzQ1MDQsImlzcyI6IkFmZm9yZG1lZCIsImp0aSI6ImJhMzU1OGVhLTQ0NTgtNDU1Ni04NTJlLTBkYmEwOWZkYTNjMSIsInN1YiI6Im1hZGlyZXByaXlhbmthMzdAZ21haWwuY29tIn0sImNvbXBhbnlOYW1lIjoiVmVyY2VsQ29tcGFueSIsImNsaWVudElEIjoiYmEzNTU4ZWEtNDQ1OC00NTU2LTg1MmUtMGRiYTA5ZmRhM2MxIiwiY2xpZW50U2VjcmV0IjoiS0xBVW5rd29vaGtYTXJxcyIsIm93bmVyTmFtZSI6IlByaXlhbmthIiwib3duZXJFbWFpbCI6Im1hZGlyZXByaXlhbmthMzdAZ21haWwuY29tIiwicm9sbE5vIjoiMjFiZDFhMDVjeiJ9.CLI0TACKlsjHvj7drMOr65eZdHj0DXtxaHE7VU8pvO0";
 
-  const productDetail = {
-    id: productid,
-    name: "Sample Product",
-    category: categoryname,
-    price: 99.99,
-    rating: 4.5,
-    company: "Sample Company",
-    discount: 10,
-    availability: "yes",
-  };
+    const companies = ["AMZ", "FLP", "SNP", "MYN", "AZO"];
+    let productDetail = null;
 
-  res.json(productDetail);
+    for (const company of companies) {
+      try {
+        const response = await axios.get(
+          `http://20.244.56.144/test/companies/${company}/categories/${categoryname}/products/${productid}`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
+
+        if (response.data) {
+          productDetail = response.data;
+          break;
+        }
+      } catch (error) {
+        
+      }
+    }
+
+    if (!productDetail) {
+      return res
+        .status(404)
+        .json({ message: "unauthorized. Please login again" });
+    }
+
+    res.json(productDetail);
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).send("Internal Server Error");
+  }
 });
 
 app.get(
   "/test/companies/:companyname/categories/:category/products",
   async (req, res) => {
     try {
-      const { companyname, category } = req.params;
+      const { companyname, categoryname } = req.params;
+      const { top, minPrice, maxPrice } = req.query;
 
-      const url = `${TEST_SERVER_URL}/test/companies/${companyname}/categories/${category}/products`;
+      const accessToken =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJNYXBDbGFpbXMiOnsiZXhwIjoxNzE3MDc0ODA0LCJpYXQiOjE3MTcwNzQ1MDQsImlzcyI6IkFmZm9yZG1lZCIsImp0aSI6ImJhMzU1OGVhLTQ0NTgtNDU1Ni04NTJlLTBkYmEwOWZkYTNjMSIsInN1YiI6Im1hZGlyZXByaXlhbmthMzdAZ21haWwuY29tIn0sImNvbXBhbnlOYW1lIjoiVmVyY2VsQ29tcGFueSIsImNsaWVudElEIjoiYmEzNTU4ZWEtNDQ1OC00NTU2LTg1MmUtMGRiYTA5ZmRhM2MxIiwiY2xpZW50U2VjcmV0IjoiS0xBVW5rd29vaGtYTXJxcyIsIm93bmVyTmFtZSI6IlByaXlhbmthIiwib3duZXJFbWFpbCI6Im1hZGlyZXByaXlhbmthMzdAZ21haWwuY29tIiwicm9sbE5vIjoiMjFiZDFhMDVjeiJ9.CLI0TACKlsjHvj7drMOr65eZdHj0DXtxaHE7VU8pvO0";
 
-      const response = await axios.get(url);
+      const productsResponse = await axios.get(
+        `http://20.244.56.144/test/companies/${companyname}/categories/${categoryname}/products`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          params: {
+            top,
+            minPrice,
+            maxPrice,
+          },
+        }
+      );
 
-      res.json(response.data);
+      return res.json(productsResponse.data);
     } catch (error) {
-      console.error("Error:", error);
-      res.status(500).send("Internal Server Error");
+      console.log("Unauthorized. Please login again");
+      if (error.response && error.response.status === 401) {
+        return res
+          .status(401)
+          .json({ message: "Unauthorized. Please login again." });
+      }
+      return res.status(500).json("Internal Server Error");
     }
   }
 );
 
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
